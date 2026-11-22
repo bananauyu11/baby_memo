@@ -1,0 +1,6 @@
+{
+  "name": "baby-memo",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=18" }
+}

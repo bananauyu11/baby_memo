@@ -117,14 +117,22 @@
 
   .settings button.row { display: block; width: 100%; text-align: left; padding: 14px 4px; border-bottom: 1px solid var(--line); font-size: 15px; }
   .settings button.row:last-child { border-bottom: none; }
+  .sync { text-align: center; font-size: 12px; color: var(--muted); padding-top: 10px; min-height: 24px; }
+  .sync.warn { color: var(--danger); }
+  .sync button { color: var(--milk); font-size: 12px; padding: 0 4px; }
+  .login p { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0 0 12px; }
+  .login input { width: 100%; font: inherit; font-size: 18px; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  .login .err { color: var(--danger); font-size: 13px; min-height: 20px; margin-top: 6px; }
   .note { font-size: 12px; color: var(--muted); margin: 8px 4px; line-height: 1.6; }
 </style>
 </head>
 <body>
 
 <!-- ===== 記録 ===== -->
+<div class="sync" id="syncStatus"></div>
+
 <section class="view" id="view-day">
-  <div class="datenav">
+  <div class="datenav" style="padding-top:4px">
     <button class="arrow" id="prevDay" aria-label="前の日">‹</button>
     <div class="date">
       <strong id="dateLabel"></strong>
@@ -182,12 +190,18 @@
 <section class="view" id="view-settings" hidden>
   <h2>データ</h2>
   <div class="card settings">
+    <button class="row" id="syncBtn">今すぐ同期する</button>
+    <button class="row" id="migrateBtn" hidden>この端末に残っている以前の記録を共有データに送る</button>
     <button class="row" id="exportBtn">バックアップを書き出す（JSON）</button>
-    <button class="row" id="importBtn">バックアップから読み込む</button>
+    <button class="row" id="importBtn">バックアップを共有データに読み込む</button>
     <button class="row" id="csvBtn">CSVで書き出す</button>
   </div>
   <input type="file" id="importFile" accept="application/json,.json" hidden>
-  <p class="note">記録はこの端末のブラウザ内に保存されます。ブラウザのデータを消すと記録も消えるので、ときどきバックアップを書き出してください。<br>iPhoneではSafariの「共有 → ホーム画面に追加」でアプリのように使えます。</p>
+  <h2>家族共有</h2>
+  <div class="card settings">
+    <button class="row" id="logoutBtn">合言葉を入れ直す</button>
+  </div>
+  <p class="note">記録は家族全員で共有されます。同じURLを開いて同じ合言葉を入れれば、誰の端末からでも記録・閲覧できます。電波がないときの記録は端末に保存され、つながったときに自動で送られます。<br>iPhoneではSafariの「共有 → ホーム画面に追加」でアプリのように使えます。</p>
 </section>
 
 <button class="fab" id="fab" aria-label="授乳を記録">＋</button>
@@ -217,9 +231,24 @@
   </div>
 </div>
 
+<!-- ===== 合言葉 ===== -->
+<div class="backdrop" id="loginBg" hidden>
+  <div class="sheet login" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+    <h3 id="loginTitle">合言葉を入力</h3>
+    <p>家族で決めた合言葉を入れてください。一度入れればこの端末に記憶されます。</p>
+    <input type="password" id="loginInput" autocomplete="current-password" aria-label="合言葉">
+    <div class="err" id="loginErr"></div>
+    <div class="actions"><button class="btn-primary" id="loginBtn">はじめる</button></div>
+  </div>
+</div>
+
 <script>
 (() => {
-  const KEY = 'baby_memo_v1';
+  const $ = id => document.getElementById(id);
+  const OLD_KEY = 'baby_memo_v1';        // 以前の端末内だけの保存先
+  const KEY = 'baby_memo_v2';            // 共有データのキャッシュ
+  const QKEY = 'baby_memo_v2_queue';     // 未送信の操作
+  const PKEY = 'baby_memo_v2_key';       // 合言葉
   const WD = ['日','月','火','水','木','金','土'];
   const TYPES = {
     milk:   { name: 'ミルク',   unit: 'ml', label: '量（ml）',     presets: [40, 60, 80, 100, 120, 140, 160] },
@@ -227,15 +256,147 @@
   };
 
   // ---------- storage ----------
-  let db = load();
-  function load() {
-    try { const d = JSON.parse(localStorage.getItem(KEY)); if (d && d.days) return d; } catch (e) {}
-    return { days: {} };
+  const ls = {
+    get(k, def) { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? def; } catch (e) { return def; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+    del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+  };
+  let serverDays = ls.get(KEY, { days: {} }).days || {};
+  let queue = ls.get(QKEY, []);
+  let familyKey = ls.get(PKEY, '');
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  let db;
+  rebuild();
+
+  // サーバーの状態 + まだ送れていない操作 = 画面に出す状態
+  function rebuild() {
+    db = { days: clone(serverDays) };
+    for (const op of queue) applyLocal(op);
   }
-  function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(db)); }
-    catch (e) { alert('保存に失敗しました。設定からバックアップを書き出してください。'); }
+  function applyLocal(op) {
+    if (op.op === 'count') {
+      const rec = day(op.date, true);
+      rec[op.key] = Math.max(0, rec[op.key] + op.delta);
+      prune(op.date);
+    } else if (op.op === 'addFeed') {
+      const rec = day(op.date, true);
+      if (!rec.feeds.some(f => f.id === op.feed.id)) rec.feeds.push({ ...op.feed });
+    } else if (op.op === 'updateFeed') {
+      const rec = day(op.date, true);
+      const i = rec.feeds.findIndex(f => f.id === op.feed.id);
+      if (i >= 0) rec.feeds[i] = { ...op.feed };
+    } else if (op.op === 'deleteFeed') {
+      const rec = day(op.date, true);
+      rec.feeds = rec.feeds.filter(f => f.id !== op.id);
+      prune(op.date);
+    } else if (op.op === 'import') {
+      for (const [k, d] of Object.entries(op.days)) {
+        const rec = day(k, true);
+        rec.poop = d.poop || 0; rec.pee = d.pee || 0;
+        for (const f of d.feeds || []) {
+          const i = rec.feeds.findIndex(x => x.id === f.id);
+          if (i >= 0) rec.feeds[i] = { ...f }; else rec.feeds.push({ ...f });
+        }
+        prune(k);
+      }
+    }
   }
+  // 操作を記録：すぐ画面に反映し、裏でサーバーへ送る
+  function commit(op) {
+    op.opId = newId();
+    queue.push(op); ls.set(QKEY, queue);
+    applyLocal(op);
+    renderStatus();
+    flush();
+  }
+
+  // ---------- sync ----------
+  let syncState = 'idle', lastSync = null, flushing = false, again = false;
+  async function api(method, body) {
+    return fetch('api/data', {
+      method,
+      headers: { 'Content-Type': 'application/json', 'x-family-key': encodeURIComponent(familyKey) },
+      body: body ? JSON.stringify(body) : undefined,
+      cache: 'no-store',
+    });
+  }
+  async function flush() {
+    if (flushing) { again = true; return; }
+    if (!familyKey) { showLogin(); return; }
+    flushing = true;
+    try {
+      do {
+        again = false;
+        while (queue.length) {
+          const r = await api('POST', queue[0]);
+          if (r.status === 401) { syncState = 'auth'; showLogin(); return; }
+          if (r.status >= 500 || r.status === 429) throw new Error('server ' + r.status);
+          // 2xx は反映済み、その他の 4xx は不正な操作なので破棄
+          if (!r.ok) console.warn('操作を破棄しました', queue[0], await r.text());
+          queue.shift(); ls.set(QKEY, queue);
+        }
+        const r = await api('GET');
+        if (r.status === 401) { syncState = 'auth'; showLogin(); return; }
+        if (!r.ok) throw new Error('server ' + r.status);
+        serverDays = (await r.json()).days || {};
+        ls.set(KEY, { days: serverDays });
+      } while (again || queue.length);
+      rebuild();
+      syncState = 'ok'; lastSync = new Date();
+      rerender();
+    } catch (e) {
+      console.warn(e);
+      syncState = navigator.onLine === false ? 'offline' : 'error';
+    } finally {
+      flushing = false;
+      renderStatus();
+    }
+  }
+  function renderStatus() {
+    const el = $('syncStatus');
+    el.classList.toggle('warn', syncState === 'error' || syncState === 'auth');
+    const pending = queue.length ? `未送信 ${queue.length}件・` : '';
+    const msg = {
+      idle: '同期中…',
+      ok: queue.length ? '送信中…' : `同期済み ${lastSync ? pad(lastSync.getHours()) + ':' + pad(lastSync.getMinutes()) : ''}`,
+      offline: `${pending}オフライン（つながったら送信します）`,
+      error: `${pending}同期できませんでした`,
+      auth: '合言葉を入れてください',
+    }[syncState];
+    el.innerHTML = '';
+    el.append(msg);
+    if (syncState === 'error' || syncState === 'offline') {
+      const b = document.createElement('button'); b.textContent = '再試行'; b.onclick = flush; el.append(b);
+    }
+  }
+  setInterval(() => { if (document.visibilityState === 'visible') flush(); }, 20000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') flush(); });
+  window.addEventListener('online', flush);
+
+  // ---------- login ----------
+  function showLogin(msg) {
+    $('loginErr').textContent = msg || (familyKey ? '合言葉が違うようです' : '');
+    $('loginBg').hidden = false;
+    renderStatus();
+  }
+  $('loginBtn').onclick = async () => {
+    const v = $('loginInput').value.trim();
+    if (!v) return;
+    familyKey = v;
+    $('loginBtn').disabled = true;
+    try {
+      const r = await api('GET');
+      if (r.status === 401) { $('loginErr').textContent = '合言葉が違います'; return; }
+      if (!r.ok) { $('loginErr').textContent = r.status === 500 ? 'サーバーの設定が終わっていません（README参照）' : '接続できませんでした'; return; }
+      ls.set(PKEY, familyKey);
+      $('loginBg').hidden = true; $('loginInput').value = '';
+      flush();
+    } catch (e) { $('loginErr').textContent = '接続できませんでした'; }
+    finally { $('loginBtn').disabled = false; }
+  };
+  $('loginInput').onkeydown = e => { if (e.key === 'Enter') $('loginBtn').click(); };
+
   function day(key, create) {
     if (!db.days[key] && create) db.days[key] = { poop: 0, pee: 0, feeds: [] };
     return db.days[key] || { poop: 0, pee: 0, feeds: [] };
@@ -255,7 +416,6 @@
 
   // ---------- day view ----------
   let cur = todayKey();
-  const $ = id => document.getElementById(id);
 
   function renderDay() {
     const d = parseKey(cur);
@@ -291,9 +451,10 @@
   }
 
   document.querySelectorAll('.counter button').forEach(b => b.onclick = () => {
-    const rec = day(cur, true);
-    rec[b.dataset.k] = Math.max(0, rec[b.dataset.k] + Number(b.dataset.d));
-    prune(cur); save(); renderDay();
+    const delta = Number(b.dataset.d);
+    if (delta < 0 && day(cur)[b.dataset.k] <= 0) return;
+    commit({ op: 'count', date: cur, key: b.dataset.k, delta });
+    renderDay();
   });
   $('prevDay').onclick = () => { cur = addDays(cur, -1); renderDay(); };
   $('nextDay').onclick = () => { cur = addDays(cur, 1); renderDay(); };
@@ -315,11 +476,11 @@
     }
   }
   function openSheet(f) {
-    editing = f || null;
+    editing = f ? f.id : null;
     $('sheetTitle').textContent = f ? '記録を編集' : '授乳を記録';
     $('delBtn').hidden = !f;
     // 新規はミルク/おっぱいのリストから選んでもらう（前回の種類を初期選択）
-    const last = localStorage.getItem(KEY + '_lastType') || 'milk';
+    const last = ls.get(KEY + '_lastType', 'milk');
     setType(f ? f.type : last);
     $('fTime').value = f ? f.time : (cur === todayKey() ? nowTime() : '12:00');
     $('fVal').value = f ? f.amount : '';
@@ -336,17 +497,15 @@
     const time = $('fTime').value;
     if (!time) { alert('時刻を入力してください'); return; }
     if (!amount || amount <= 0) { alert(TYPES[selType].label + 'を入力してください'); return; }
-    const rec = day(cur, true);
-    if (editing) Object.assign(editing, { type: selType, time, amount });
-    else rec.feeds.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), type: selType, time, amount });
-    try { localStorage.setItem(KEY + '_lastType', selType); } catch (e) {}
-    save(); closeSheet(); renderDay();
+    if (editing) commit({ op: 'updateFeed', date: cur, feed: { id: editing, type: selType, time, amount } });
+    else commit({ op: 'addFeed', date: cur, feed: { id: newId(), type: selType, time, amount } });
+    ls.set(KEY + '_lastType', selType);
+    closeSheet(); renderDay();
   };
   $('delBtn').onclick = () => {
     if (!editing || !confirm('この記録を削除しますか？')) return;
-    const rec = day(cur, true);
-    rec.feeds = rec.feeds.filter(f => f !== editing);
-    prune(cur); save(); closeSheet(); renderDay();
+    commit({ op: 'deleteFeed', date: cur, id: editing });
+    closeSheet(); renderDay();
   };
 
   // ---------- charts ----------
@@ -444,7 +603,13 @@
   $('nextMonth').onclick = () => shiftMonth(1);
 
   // ---------- tabs ----------
+  let view = 'day';
+  function rerender() {
+    if (view === 'day') renderDay();
+    if (view === 'chart') renderCharts();
+  }
   function showView(v) {
+    view = v;
     document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
     for (const id of ['day', 'chart', 'settings']) $('view-' + id).hidden = id !== v;
     $('fab').hidden = v !== 'day';
@@ -478,13 +643,26 @@
     try {
       const d = JSON.parse(await file.text());
       if (!d || typeof d.days !== 'object') throw new Error();
-      if (!confirm('今の記録をバックアップの内容で置き換えます。よろしいですか？')) return;
-      db = d; save(); alert('読み込みました'); showView('day');
+      if (!confirm('バックアップの記録を共有データに読み込みます。同じ日の回数は上書きされ、授乳記録は追加されます。よろしいですか？')) return;
+      commit({ op: 'import', days: d.days }); alert('読み込みました'); showView('day');
     } catch (err) { alert('読み込めませんでした。バックアップのJSONファイルを選んでください。'); }
     finally { e.target.value = ''; }
   };
 
+  const oldData = ls.get(OLD_KEY, null);
+  $('migrateBtn').hidden = !(oldData && oldData.days && Object.keys(oldData.days).length);
+  $('migrateBtn').onclick = () => {
+    if (!confirm(`この端末の以前の記録（${Object.keys(oldData.days).length}日分）を共有データに送ります。よろしいですか？`)) return;
+    commit({ op: 'import', days: oldData.days });
+    ls.set(OLD_KEY + '_migrated', oldData); ls.del(OLD_KEY);
+    $('migrateBtn').hidden = true; alert('送信しました'); showView('day');
+  };
+  $('syncBtn').onclick = flush;
+  $('logoutBtn').onclick = () => { familyKey = ''; ls.del(PKEY); showLogin(); };
+
   renderDay();
+  renderStatus();
+  flush();
 })();
 </script>
 </body>
