@@ -1,0 +1,699 @@
+{
+ "days": {
+  "2026-11-07": {
+   "poop": 0,
+   "pee": 0,
+   "feeds": [
+    {
+     "id": "seed202611071400b",
+     "type": "breast",
+     "time": "14:00",
+     "amount": 10
+    },
+    {
+     "id": "seed202611071400m",
+     "type": "milk",
+     "time": "14:00",
+     "amount": 40
+    },
+    {
+     "id": "seed202611071700b",
+     "type": "breast",
+     "time": "17:00",
+     "amount": 10
+    },
+    {
+     "id": "seed202611071700m",
+     "type": "milk",
+     "time": "17:00",
+     "amount": 40
+    },
+    {
+     "id": "seed202611072000m",
+     "type": "milk",
+     "time": "20:00",
+     "amount": 40
+    },
+    {
+     "id": "seed202611072000b",
+     "type": "breast",
+     "time": "20:00",
+     "amount": 15,
+     "note": "10分＋ひだり5分"
+    },
+    {
+     "id": "seed202611072230m",
+     "type": "milk",
+     "time": "22:30",
+     "amount": 60
+    }
+   ]
+  },
+  "2026-11-08": {
+   "poop": 0,
+   "pee": 0,
+   "feeds": [
+    {
+     "id": "seed202611080130m",
+     "type": "milk",
+     "time": "01:30",
+     "amount": 40
+    },
+    {
+     "id": "seed202611080130b",
+     "type": "breast",
+     "time": "01:30",
+     "amount": 10,
+     "note": "5分＋5分"
+    },
+    {
+     "id": "seed202611080430m",
+     "type": "milk",
+     "time": "04:30",
+     "amount": 60
+    },
+    {
+     "id": "seed202611080530b",
+     "type": "breast",
+     "time": "05:30",
+     "amount": 5
+    },
+    {
+     "id": "seed202611080730b",
+     "type": "breast",
+     "time": "07:30",
+     "amount": null,
+     "note": "ちょっと"
+    },
+    {
+     "id": "seed202611080730m",
+     "type": "milk",
+     "time": "07:30",
+     "amount": 60
+    },
+    {
+     "id": "seed202611081000m",
+     "type": "milk",
+     "time": "10:00",
+     "amount": 60
+    },
+    {
+     "id": "seed202611081300b",
+     "type": "breast",
+     "time": "13:00",
+     "amount": 60,
+     "note": "13:00〜14:00"
+    },
+    {
+     "id": "seed202611081430m",
+     "type": "milk",
+     "time": "14:30",
+     "amount": 40
+    },
+    {
+     "id": "seed202611081800m",
+     "type": "milk",
+     "time": "18:00",
+     "amount": 50
+    },
+    {
+     "id": "seed202611082030m",
+     "type": "milk",
+     "time": "20:30",
+     "amount": 60
+    },
+    {
+     "id": "seed202611082030b",
+     "type": "breast",
+     "time": "20:30",
+     "amount": null
+    }
+   ]
+  },
+  "2026-11-09": {
+   "poop": 0,
+   "pee": 0,
+   "feeds": [
+    {
+     "id": "seed202611090030m",
+     "type": "milk",
+     "time": "00:30",
+     "amount": 60
+    },
+    {
+     "id": "seed202611090410m",
+     "type": "milk",
+     "time": "04:10",
+     "amount": 60
+    },
+    {
+     "id": "seed202611090410b",
+     "type": "breast",
+     "time": "04:10",
+     "amount": null
+    },
+    {
+     "id": "seed202611090810m",
+     "type": "milk",
+     "time": "08:10",
+     "amount": 80
+    },
+    {
+     "id": "seed202611090810b",
+     "type": "breast",
+     "time": "08:10",
+     "amount": null
+    },
+    {
+     "id": "seed202611091110b",
+     "type": "breast",
+     "time": "11:10",
+     "amount": null
+    },
+    {
+     "id": "seed202611091300b",
+     "type": "breast",
+     "time": "13:00",
+     "amount": null
+    },
+    {
+     "id": "seed202611091400b",
+     "type": "breast",
+     "time": "14:00",
+     "amount": 40,
+     "note": "20分、20分"
+    },
+    {
+     "id": "seed202611091500m",
+     "type": "milk",
+     "time": "15:00",
+     "amount": 80,
+     "note": "60＋20"
+    },
+    {
+     "id": "seed202611091800m",
+     "type": "milk",
+     "time": "18:00",
+     "amount": 80
+    },
+    {
+     "id": "seed202611092100m",
+     "type": "milk",
+     "time": "21:00",
+     "amount": 80
+    }
+   ]
+  },
+  "2026-11-10": {
+   "poop": 0,
+   "pee": 0,
+   "feeds": [
+    {
+     "id": "seed202611100030m",
+     "type": "milk",
+     "time": "00:30",
+     "amount": 80
+    },
+    {
+     "id": "seed202611100320m",
+     "type": "milk",
+     "time": "03:20",
+     "amount": 10,
+     "note": "3:40と続けて"
+    },
+    {
+     "id": "seed202611100340m",
+     "type": "milk",
+     "time": "03:40",
+     "amount": 40
+    },
+    {
+     "id": "seed202611100630m",
+     "type": "milk",
+     "time": "06:30",
+     "amount": 80
+    },
+    {
+     "id": "seed202611100930b",
+     "type": "breast",
+     "time": "09:30",
+     "amount": null
+    },
+    {
+     "id": "seed202611101130b",
+     "type": "breast",
+     "time": "11:30",
+     "amount": null
+    },
+    {
+     "id": "seed202611101230m",
+     "type": "milk",
+     "time": "12:30",
+     "amount": 80
+    },
+    {
+     "id": "seed202611101530m",
+     "type": "milk",
+     "time": "15:30",
+     "amount": 80
+    },
+    {
+     "id": "seed202611101830m",
+     "type": "milk",
+     "time": "18:30",
+     "amount": 80
+    },
+    {
+     "id": "seed202611102130m",
+     "type": "milk",
+     "time": "21:30",
+     "amount": 80
+    },
+    {
+     "id": "seed202611102300b",
+     "type": "breast",
+     "time": "23:00",
+     "amount": null
+    }
+   ]
+  },
+  "2026-11-11": {
+   "poop": 0,
+   "pee": 0,
+   "feeds": [
+    {
+     "id": "seed202611110200m",
+     "type": "milk",
+     "time": "02:00",
+     "amount": 80,
+     "note": "※ずっと20"
+    },
+    {
+     "id": "seed202611110500m",
+     "type": "milk",
+     "time": "05:00",
+     "amount": 40
+    },
+    {
+     "id": "seed202611110930b",
+     "type": "breast",
+     "time": "09:30",
+     "amount": null
+    },
+    {
+     "id": "seed202611111230m",
+     "type": "milk",
+     "time": "12:30",
+     "amount": 80
+    },
+    {
+     "id": "seed202611111530b",
+     "type": "breast",
+     "time": "15:30",
+     "amount": null
+    },
+    {
+     "id": "seed202611111600b",
+     "type": "breast",
+     "time": "16:00",
+     "amount": null
+    },
+    {
+     "id": "seed202611111700m",
+     "type": "milk",
+     "time": "17:00",
+     "amount": 40
+    },
+    {
+     "id": "seed202611111930m",
+     "type": "milk",
+     "time": "19:30",
+     "amount": 80,
+     "note": "70＋10"
+    },
+    {
+     "id": "seed202611112230m",
+     "type": "milk",
+     "time": "22:30",
+     "amount": 80
+    },
+    {
+     "id": "seed202611112230b",
+     "type": "breast",
+     "time": "22:30",
+     "amount": null
+    }
+   ]
+  },
+  "2026-11-12": {
+   "poop": 0,
+   "pee": 0,
+   "feeds": [
+    {
+     "id": "seed202611120130m",
+     "type": "milk",
+     "time": "01:30",
+     "amount": 80
+    },
+    {
+     "id": "seed202611120230b",
+     "type": "breast",
+     "time": "02:30",
+     "amount": null
+    },
+    {
+     "id": "seed202611120530m",
+     "type": "milk",
+     "time": "05:30",
+     "amount": 70
+    },
+    {
+     "id": "seed202611120830m",
+     "type": "milk",
+     "time": "08:30",
+     "amount": 80
+    },
+    {
+     "id": "seed202611121130m",
+     "type": "milk",
+     "time": "11:30",
+     "amount": 80
+    },
+    {
+     "id": "seed202611121130b",
+     "type": "breast",
+     "time": "11:30",
+     "amount": null
+    },
+    {
+     "id": "seed202611121340b",
+     "type": "breast",
+     "time": "13:40",
+     "amount": 10
+    },
+    {
+     "id": "seed202611121430m",
+     "type": "milk",
+     "time": "14:30",
+     "amount": 70
+    },
+    {
+     "id": "seed202611121500m",
+     "type": "milk",
+     "time": "15:00",
+     "amount": 10
+    },
+    {
+     "id": "seed202611121820m",
+     "type": "milk",
+     "time": "18:20",
+     "amount": 80
+    },
+    {
+     "id": "seed202611122130m",
+     "type": "milk",
+     "time": "21:30",
+     "amount": 60
+    },
+    {
+     "id": "seed202611122130b",
+     "type": "breast",
+     "time": "21:30",
+     "amount": 20
+    }
+   ]
+  },
+  "2026-11-13": {
+   "poop": 6,
+   "pee": 7,
+   "feeds": [
+    {
+     "id": "seed202611130108b",
+     "type": "breast",
+     "time": "01:08",
+     "amount": 30
+    },
+    {
+     "id": "seed202611130410m",
+     "type": "milk",
+     "time": "04:10",
+     "amount": 80
+    },
+    {
+     "id": "seed202611130410b",
+     "type": "breast",
+     "time": "04:10",
+     "amount": 10,
+     "note": "10〜15分"
+    },
+    {
+     "id": "seed202611130800m",
+     "type": "milk",
+     "time": "08:00",
+     "amount": 60
+    },
+    {
+     "id": "seed202611131100b",
+     "type": "breast",
+     "time": "11:00",
+     "amount": 35
+    },
+    {
+     "id": "seed202611131225b",
+     "type": "breast",
+     "time": "12:25",
+     "amount": 10
+    },
+    {
+     "id": "seed202611131400m",
+     "type": "milk",
+     "time": "14:00",
+     "amount": 80
+    },
+    {
+     "id": "seed202611131440b",
+     "type": "breast",
+     "time": "14:40",
+     "amount": 10
+    },
+    {
+     "id": "seed202611131700m",
+     "type": "milk",
+     "time": "17:00",
+     "amount": 80
+    },
+    {
+     "id": "seed202611131700b",
+     "type": "breast",
+     "time": "17:00",
+     "amount": 5
+    },
+    {
+     "id": "seed202611132000m",
+     "type": "milk",
+     "time": "20:00",
+     "amount": 70
+    },
+    {
+     "id": "seed202611132330m",
+     "type": "milk",
+     "time": "23:30",
+     "amount": 80
+    },
+    {
+     "id": "seed202611132330b",
+     "type": "breast",
+     "time": "23:30",
+     "amount": null,
+     "note": "ちょい"
+    }
+   ]
+  },
+  "2026-11-14": {
+   "poop": 3,
+   "pee": 7,
+   "feeds": [
+    {
+     "id": "seed202611140320m",
+     "type": "milk",
+     "time": "03:20",
+     "amount": 80
+    },
+    {
+     "id": "seed202611140700m",
+     "type": "milk",
+     "time": "07:00",
+     "amount": 80
+    },
+    {
+     "id": "seed202611141010m",
+     "type": "milk",
+     "time": "10:10",
+     "amount": 80
+    },
+    {
+     "id": "seed202611141310m",
+     "type": "milk",
+     "time": "13:10",
+     "amount": 80
+    },
+    {
+     "id": "seed202611141500b",
+     "type": "breast",
+     "time": "15:00",
+     "amount": 13
+    },
+    {
+     "id": "seed202611141830m",
+     "type": "milk",
+     "time": "18:30",
+     "amount": 100
+    },
+    {
+     "id": "seed202611142145m",
+     "type": "milk",
+     "time": "21:45",
+     "amount": 80,
+     "note": "くすり"
+    }
+   ]
+  },
+  "2026-11-15": {
+   "poop": 3,
+   "pee": 6,
+   "feeds": [
+    {
+     "id": "seed202611150045b",
+     "type": "breast",
+     "time": "00:45",
+     "amount": null,
+     "note": "メモでは「12:45」"
+    },
+    {
+     "id": "seed202611150045m",
+     "type": "milk",
+     "time": "00:45",
+     "amount": 100,
+     "note": "メモでは「12:45」"
+    },
+    {
+     "id": "seed202611150213b",
+     "type": "breast",
+     "time": "02:13",
+     "amount": null,
+     "note": "ちょい"
+    },
+    {
+     "id": "seed202611150515m",
+     "type": "milk",
+     "time": "05:15",
+     "amount": 80
+    },
+    {
+     "id": "seed202611150900m",
+     "type": "milk",
+     "time": "09:00",
+     "amount": 170
+    },
+    {
+     "id": "seed202611151245b",
+     "type": "breast",
+     "time": "12:45",
+     "amount": 45,
+     "note": "45〜50分"
+    },
+    {
+     "id": "seed202611151400m",
+     "type": "milk",
+     "time": "14:00",
+     "amount": 60
+    },
+    {
+     "id": "seed202611151545b",
+     "type": "breast",
+     "time": "15:45",
+     "amount": 15
+    },
+    {
+     "id": "seed202611151750b",
+     "type": "breast",
+     "time": "17:50",
+     "amount": 51
+    },
+    {
+     "id": "seed202611151900m",
+     "type": "milk",
+     "time": "19:00",
+     "amount": 60
+    },
+    {
+     "id": "seed202611152030m",
+     "type": "milk",
+     "time": "20:30",
+     "amount": 70
+    },
+    {
+     "id": "seed202611152230b",
+     "type": "breast",
+     "time": "22:30",
+     "amount": 20,
+     "note": "20〜25分"
+    },
+    {
+     "id": "seed202611152330m",
+     "type": "milk",
+     "time": "23:30",
+     "amount": 100
+    }
+   ]
+  },
+  "2026-11-16": {
+   "poop": 3,
+   "pee": 6,
+   "feeds": [
+    {
+     "id": "seed202611160320m",
+     "type": "milk",
+     "time": "03:20",
+     "amount": 100
+    },
+    {
+     "id": "seed202611160740m",
+     "type": "milk",
+     "time": "07:40",
+     "amount": 100
+    },
+    {
+     "id": "seed202611161140m",
+     "type": "milk",
+     "time": "11:40",
+     "amount": 100
+    },
+    {
+     "id": "seed202611161500b",
+     "type": "breast",
+     "time": "15:00",
+     "amount": 22
+    },
+    {
+     "id": "seed202611161600m",
+     "type": "milk",
+     "time": "16:00",
+     "amount": 80
+    },
+    {
+     "id": "seed202611161730b",
+     "type": "breast",
+     "time": "17:30",
+     "amount": 10
+    },
+    {
+     "id": "seed202611162000m",
+     "type": "milk",
+     "time": "20:00",
+     "amount": 100
+    }
+   ]
+  }
+ }
+}

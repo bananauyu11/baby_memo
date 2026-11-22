@@ -63,6 +63,8 @@
   .tag.milk { background: var(--milk); } .tag.breast { background: var(--breast); }
   .feeds .val { flex: 1; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .feeds .val small { font-size: 13px; color: var(--muted); font-weight: 400; }
+  .feeds .val .unk { font-size: 14px; color: var(--muted); font-weight: 600; }
+  .feeds .val .memo { display: block; font-size: 12px; color: var(--muted); font-weight: 400; margin-top: 2px; }
   .feeds .edit { color: var(--muted); padding: 8px; font-size: 14px; }
   .empty { color: var(--muted); text-align: center; padding: 16px; font-size: 14px; }
 
@@ -192,6 +194,7 @@
   <div class="card settings">
     <button class="row" id="syncBtn">今すぐ同期する</button>
     <button class="row" id="migrateBtn" hidden>この端末に残っている以前の記録を共有データに送る</button>
+    <button class="row" id="seedBtn">手書きメモの記録（11/7〜11/16）を読み込み直す</button>
     <button class="row" id="exportBtn">バックアップを書き出す（JSON）</button>
     <button class="row" id="importBtn">バックアップを共有データに読み込む</button>
     <button class="row" id="csvBtn">CSVで書き出す</button>
@@ -223,6 +226,7 @@
     <div class="field"><label for="fTime">時刻</label><input type="time" id="fTime"></div>
     <div class="field"><label for="fVal" id="fValLabel">量（ml）</label><input type="number" id="fVal" inputmode="numeric" min="0" step="1"></div>
     <div class="presets" id="presets"></div>
+    <div class="field"><label for="fNote">メモ</label><input type="text" id="fNote" maxlength="100" placeholder="任意" style="width:200px;text-align:left;font-size:16px"></div>
     <div class="actions">
       <button class="btn-danger" id="delBtn" hidden>削除</button>
       <button class="btn-secondary" id="cancelBtn">キャンセル</button>
@@ -252,7 +256,7 @@
   const WD = ['日','月','火','水','木','金','土'];
   const TYPES = {
     milk:   { name: 'ミルク',   unit: 'ml', label: '量（ml）',     presets: [40, 60, 80, 100, 120, 140, 160] },
-    breast: { name: 'おっぱい', unit: '分', label: '時間（分）', presets: [5, 10, 15, 20, 25, 30] },
+    breast: { name: 'おっぱい', unit: '分', label: '時間（分）', presets: [5, 10, 15, 20, 25, 30], optional: true },
   };
 
   // ---------- storage ----------
@@ -341,6 +345,11 @@
         if (!r.ok) throw new Error('server ' + r.status);
         serverDays = (await r.json()).days || {};
         ls.set(KEY, { days: serverDays });
+        // 共有データが空なら、手書きメモから起こした初期データを登録する
+        if (!Object.keys(serverDays).length && !queue.length && !ls.get(KEY + '_seeded', false)) {
+          const seed = await loadSeed();
+          if (seed) { ls.set(KEY + '_seeded', true); commit({ op: 'import', days: seed.days }); }
+        }
       } while (again || queue.length);
       rebuild();
       syncState = 'ok'; lastSync = new Date();
@@ -352,6 +361,10 @@
       flushing = false;
       renderStatus();
     }
+  }
+  async function loadSeed() {
+    try { const r = await fetch('seed.json', { cache: 'no-store' }); return r.ok ? await r.json() : null; }
+    catch (e) { return null; }
   }
   function renderStatus() {
     const el = $('syncStatus');
@@ -428,8 +441,8 @@
     $('poopNum').textContent = rec.poop;
     $('peeNum').textContent = rec.pee;
 
-    const milks = rec.feeds.filter(f => f.type === 'milk').map(f => f.amount);
-    const breasts = rec.feeds.filter(f => f.type === 'breast').map(f => f.amount);
+    const milks = rec.feeds.filter(f => f.type === 'milk' && f.amount > 0).map(f => f.amount);
+    const breasts = rec.feeds.filter(f => f.type === 'breast' && f.amount > 0).map(f => f.amount);
     $('sumMilk').textContent = milks.reduce((a, b) => a + b, 0);
     $('maxMilk').textContent = milks.length ? Math.max(...milks) : '–';
     $('sumBreast').textContent = breasts.reduce((a, b) => a + b, 0);
@@ -444,7 +457,8 @@
       const t = TYPES[f.type];
       const li = document.createElement('li');
       li.innerHTML = `<span class="time">${f.time}</span><span class="tag ${f.type}">${t.name}</span>
-        <span class="val">${f.amount}<small> ${t.unit}</small></span><button class="edit">編集</button>`;
+        <span class="val">${f.amount > 0 ? `${f.amount}<small> ${t.unit}</small>` : '<span class="unk">時間不明</span>'}${f.note ? `<span class="memo"></span>` : ''}</span><button class="edit">編集</button>`;
+      if (f.note) li.querySelector('.memo').textContent = f.note;
       li.querySelector('.edit').onclick = () => openSheet(f);
       list.appendChild(li);
     }
@@ -467,6 +481,7 @@
     selType = t;
     document.querySelectorAll('.typepick button').forEach(b => b.classList.toggle('sel', b.dataset.t === t));
     $('fValLabel').textContent = TYPES[t].label;
+    $('fVal').placeholder = TYPES[t].optional ? '不明なら空欄' : '';
     const p = $('presets'); p.innerHTML = '';
     for (const v of TYPES[t].presets) {
       const b = document.createElement('button');
@@ -483,7 +498,8 @@
     const last = ls.get(KEY + '_lastType', 'milk');
     setType(f ? f.type : last);
     $('fTime').value = f ? f.time : (cur === todayKey() ? nowTime() : '12:00');
-    $('fVal').value = f ? f.amount : '';
+    $('fVal').value = f && f.amount > 0 ? f.amount : '';
+    $('fNote').value = f && f.note ? f.note : '';
     $('sheetBg').hidden = false;
     if (!f) setTimeout(() => $('fVal').focus(), 50);
   }
@@ -496,9 +512,12 @@
     const amount = Math.round(Number($('fVal').value));
     const time = $('fTime').value;
     if (!time) { alert('時刻を入力してください'); return; }
-    if (!amount || amount <= 0) { alert(TYPES[selType].label + 'を入力してください'); return; }
-    if (editing) commit({ op: 'updateFeed', date: cur, feed: { id: editing, type: selType, time, amount } });
-    else commit({ op: 'addFeed', date: cur, feed: { id: newId(), type: selType, time, amount } });
+    const blank = $('fVal').value.trim() === '';
+    if (!(blank && TYPES[selType].optional) && (!amount || amount <= 0)) { alert(TYPES[selType].label + 'を入力してください'); return; }
+    const feed = { id: editing || newId(), type: selType, time, amount: blank ? null : amount };
+    const note = $('fNote').value.trim();
+    if (note) feed.note = note;
+    commit({ op: editing ? 'updateFeed' : 'addFeed', date: cur, feed });
     ls.set(KEY + '_lastType', selType);
     closeSheet(); renderDay();
   };
@@ -515,8 +534,8 @@
   function dailySeries(keys) {
     return keys.map(k => {
       const feeds = (db.days[k] || { feeds: [] }).feeds;
-      const milks = feeds.filter(f => f.type === 'milk').map(f => f.amount);
-      const breast = feeds.filter(f => f.type === 'breast').reduce((a, f) => a + f.amount, 0);
+      const milks = feeds.filter(f => f.type === 'milk' && f.amount > 0).map(f => f.amount);
+      const breast = feeds.filter(f => f.type === 'breast').reduce((a, f) => a + (f.amount || 0), 0);
       return { key: k, maxMilk: milks.length ? Math.max(...milks) : null, breast: breast || null };
     });
   }
@@ -628,14 +647,15 @@
   }
   $('exportBtn').onclick = () => download(`baby_memo_${todayKey()}.json`, JSON.stringify(db, null, 1), 'application/json');
   $('csvBtn').onclick = () => {
-    const rows = [['日付', 'うんち', 'しっこ', '時刻', '種類', '量/時間', '単位']];
+    const csv = v => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v;
+    const rows = [['日付', 'うんち', 'しっこ', '時刻', '種類', '量/時間', '単位', 'メモ']];
     for (const k of Object.keys(db.days).sort()) {
       const d = db.days[k];
       const feeds = [...d.feeds].sort((a, b) => a.time.localeCompare(b.time));
-      if (!feeds.length) rows.push([k, d.poop, d.pee, '', '', '', '']);
-      feeds.forEach((f, i) => rows.push([k, i ? '' : d.poop, i ? '' : d.pee, f.time, TYPES[f.type].name, f.amount, TYPES[f.type].unit]));
+      if (!feeds.length) rows.push([k, d.poop, d.pee, '', '', '', '', '']);
+      feeds.forEach((f, i) => rows.push([k, i ? '' : d.poop, i ? '' : d.pee, f.time, TYPES[f.type].name, f.amount ?? '', TYPES[f.type].unit, f.note || '']));
     }
-    download(`baby_memo_${todayKey()}.csv`, '﻿' + rows.map(r => r.join(',')).join('\n'), 'text/csv');
+    download(`baby_memo_${todayKey()}.csv`, '﻿' + rows.map(r => r.map(csv).join(',')).join('\n'), 'text/csv');
   };
   $('importBtn').onclick = () => $('importFile').click();
   $('importFile').onchange = async e => {
@@ -658,6 +678,12 @@
     $('migrateBtn').hidden = true; alert('送信しました'); showView('day');
   };
   $('syncBtn').onclick = flush;
+  $('seedBtn').onclick = async () => {
+    if (!confirm('手書きメモから起こした11/7〜11/16の記録を読み込み直します。その日の回数と、初期データの授乳記録が元の値に戻ります（あとから追加した記録は残ります）。よろしいですか？')) return;
+    const seed = await loadSeed();
+    if (!seed) { alert('初期データを読み込めませんでした'); return; }
+    commit({ op: 'import', days: seed.days }); alert('読み込みました');
+  };
   $('logoutBtn').onclick = () => { familyKey = ''; ls.del(PKEY); showLogin(); };
 
   renderDay();

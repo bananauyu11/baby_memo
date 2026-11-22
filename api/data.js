@@ -60,9 +60,15 @@ function cleanFeed(f) {
   if (!f || !isId(f.id)) throw new HttpError(400, 'bad feed id');
   if (f.type !== 'milk' && f.type !== 'breast') throw new HttpError(400, 'bad feed type');
   if (typeof f.time !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(f.time)) throw new HttpError(400, 'bad time');
-  const amount = Number(f.amount);
-  if (!Number.isInteger(amount) || amount < 1 || amount > 2000) throw new HttpError(400, 'bad amount');
-  return { id: f.id, type: f.type, time: f.time, amount };
+  // おっぱいは時間不明（null）も可
+  const amount = f.amount == null && f.type === 'breast' ? null : Number(f.amount);
+  if (amount !== null && (!Number.isInteger(amount) || amount < 1 || amount > 2000)) throw new HttpError(400, 'bad amount');
+  const out = { id: f.id, type: f.type, time: f.time, amount };
+  if (f.note != null) {
+    if (typeof f.note !== 'string' || f.note.length > 100) throw new HttpError(400, 'bad note');
+    if (f.note.trim()) out.note = f.note.trim();
+  }
+  return out;
 }
 const cleanCount = v => { const n = Number(v); return Number.isInteger(n) && n >= 0 && n <= 999 ? n : 0; };
 
