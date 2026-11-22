@@ -579,7 +579,6 @@
       const has = series.map(s => s[f]).filter(v => v != null);
       return {
         n: has.length,
-        avg: has.length ? Math.round(has.reduce((a, b) => a + b, 0) / has.length * 10) / 10 : null,
         max: has.length ? Math.max(...has) : null,
       };
     };
@@ -587,7 +586,7 @@
     const multi = defs.length > 1;
     el.innerHTML = `<div class="chart-head"><b>${title}</b><span>${unit}</span></div>
       ${multi ? `<div class="legend">${defs.map(d => `<span><i class="${d.kind === 'line' ? 'line' : ''}" style="background:${d.color}"></i>${d.name}</span>`).join('')}</div>` : ''}
-      <div class="stats">${stats.map(st => `<span>${multi ? `<span class="sname">${st.name}</span> ` : ''}平均 <b>${st.avg ?? '–'}</b>　最高 <b>${st.max ?? '–'}</b></span>`).join('')}
+      <div class="stats">${stats.map(st => `<span>${multi ? `<span class="sname">${st.name}</span> ` : ''}最高 <b>${st.max ?? '–'}</b></span>`).join('')}
       <span>記録日数 <b>${Math.max(...stats.map(st => st.n))}</b></span></div>`;
     if (!series.length) { el.insertAdjacentHTML('beforeend', '<div class="empty">記録がありません</div>'); return; }
 
