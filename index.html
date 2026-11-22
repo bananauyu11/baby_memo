@@ -10,12 +10,12 @@
 <style>
   :root {
     --bg: #f7f3ee; --card: #ffffff; --text: #2b2622; --muted: #8a8078; --line: #e8e1d8;
-    --poop: #b07a3c; --pee: #d9a520; --milk: #4f86c6; --breast: #d9668a; --danger: #c94a4a;
+    --poop: #b07a3c; --pee: #d9a520; --milk: #4f86c6; --milk-light: #b3cdec; --breast: #d9668a; --danger: #c94a4a;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #1b1917; --card: #262320; --text: #f0ebe5; --muted: #a39a91; --line: #3a3531;
-      --poop: #cf9a5c; --pee: #e8c14a; --milk: #77a6dd; --breast: #e88aa8; --danger: #e06b6b;
+      --poop: #cf9a5c; --pee: #e8c14a; --milk: #77a6dd; --milk-light: #3b5a80; --breast: #e88aa8; --danger: #e06b6b;
     }
   }
   * { box-sizing: border-box; }
@@ -109,7 +109,13 @@
   .chart-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
   .chart-head b { font-size: 15px; }
   .chart-head span { font-size: 12px; color: var(--muted); }
-  .stats { display: flex; gap: 16px; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .stats { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .stats .sname { color: var(--text); font-weight: 600; }
+  .legend { display: flex; gap: 12px; font-size: 12px; color: var(--muted); margin: 2px 0 6px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  .legend i.line { height: 3px; border-radius: 2px; vertical-align: 2px; width: 14px; }
+  svg.chart rect.hit { fill: transparent; cursor: pointer; }
+  svg.chart rect.band { fill: var(--line); }
   .stats b { color: var(--text); font-variant-numeric: tabular-nums; }
   svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
   svg.chart text { fill: var(--muted); font-size: 10px; font-family: inherit; }
@@ -181,11 +187,13 @@
     <strong id="monthLabel"></strong>
     <button id="nextMonth" aria-label="次の月">›</button>
   </div>
-  <h2></h2>
+  <h2>ミルク</h2>
   <div class="card" id="chartMilk"></div>
-  <h2></h2>
+  <h2>うんち・しっこ</h2>
+  <div class="card" id="chartToilet"></div>
+  <h2>おっぱい</h2>
   <div class="card" id="chartBreast"></div>
-  <p class="note">棒をタップすると値が表示されます。もう一度タップするとその日の記録を開きます。</p>
+  <p class="note">グラフをタップするとその日の値が表示されます。同じ日をもう一度タップするとその日の記録を開きます。</p>
 </section>
 
 <!-- ===== 設定 ===== -->
@@ -533,10 +541,17 @@
 
   function dailySeries(keys) {
     return keys.map(k => {
-      const feeds = (db.days[k] || { feeds: [] }).feeds;
-      const milks = feeds.filter(f => f.type === 'milk' && f.amount > 0).map(f => f.amount);
-      const breast = feeds.filter(f => f.type === 'breast').reduce((a, f) => a + (f.amount || 0), 0);
-      return { key: k, maxMilk: milks.length ? Math.max(...milks) : null, breast: breast || null };
+      const rec = db.days[k] || { poop: 0, pee: 0, feeds: [] };
+      const milks = rec.feeds.filter(f => f.type === 'milk' && f.amount > 0).map(f => f.amount);
+      const breast = rec.feeds.filter(f => f.type === 'breast').reduce((a, f) => a + (f.amount || 0), 0);
+      return {
+        key: k,
+        maxMilk: milks.length ? Math.max(...milks) : null,
+        sumMilk: milks.length ? milks.reduce((a, b) => a + b, 0) : null,
+        breast: breast || null,
+        poop: rec.poop || null,
+        pee: rec.pee || null,
+      };
     });
   }
   function keysForRange() {
@@ -558,51 +573,75 @@
     return 10 * p;
   }
 
-  function drawChart(el, title, unit, color, series, field) {
-    const vals = series.map(s => s[field]);
-    const has = vals.filter(v => v != null);
-    const avg = has.length ? Math.round(has.reduce((a, b) => a + b, 0) / has.length) : null;
-    const mx = has.length ? Math.max(...has) : null;
+  // defs: [{ field, name, color, kind: 'bar' | 'line' }]  bar 系列は日ごとに横並び、line は上に重ねる
+  function drawChart(el, title, unit, defs, series) {
+    const statOf = f => {
+      const has = series.map(s => s[f]).filter(v => v != null);
+      return {
+        n: has.length,
+        avg: has.length ? Math.round(has.reduce((a, b) => a + b, 0) / has.length * 10) / 10 : null,
+        max: has.length ? Math.max(...has) : null,
+      };
+    };
+    const stats = defs.map(d => ({ ...d, ...statOf(d.field) }));
+    const multi = defs.length > 1;
     el.innerHTML = `<div class="chart-head"><b>${title}</b><span>${unit}</span></div>
-      <div class="stats"><span>平均 <b>${avg ?? '–'}</b></span><span>最高 <b>${mx ?? '–'}</b></span><span>記録日数 <b>${has.length}</b></span></div>`;
+      ${multi ? `<div class="legend">${defs.map(d => `<span><i class="${d.kind === 'line' ? 'line' : ''}" style="background:${d.color}"></i>${d.name}</span>`).join('')}</div>` : ''}
+      <div class="stats">${stats.map(st => `<span>${multi ? `<span class="sname">${st.name}</span> ` : ''}平均 <b>${st.avg ?? '–'}</b>　最高 <b>${st.max ?? '–'}</b></span>`).join('')}
+      <span>記録日数 <b>${Math.max(...stats.map(st => st.n))}</b></span></div>`;
     if (!series.length) { el.insertAdjacentHTML('beforeend', '<div class="empty">記録がありません</div>'); return; }
 
     const W = 340, H = 180, L = 30, R = 6, T = 8, B = 22;
-    const ymax = niceMax(mx || 0);
-    const n = series.length, slot = (W - L - R) / n, bw = Math.max(1, Math.min(slot * 0.7, 24));
+    const ymax = niceMax(Math.max(0, ...stats.map(st => st.max || 0)));
+    const n = series.length, slot = (W - L - R) / n;
+    const bars = defs.filter(d => d.kind !== 'line'), lines = defs.filter(d => d.kind === 'line');
+    const groupW = Math.max(1, Math.min(slot * 0.75, 24 * bars.length));
+    const bw = groupW / Math.max(1, bars.length);
     const y = v => T + (H - T - B) * (1 - v / ymax);
-    const ns = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(ns, 'svg');
+    const cxOf = i => L + slot * i + slot / 2;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('class', 'chart');
-    let html = '';
+    let html = `<rect class="band" id="band" x="0" y="${T}" width="${slot}" height="${H - T - B}" visibility="hidden"/>`;
     for (let i = 0; i <= 4; i++) {
       const v = ymax * i / 4, yy = y(v);
       html += `<line class="grid" x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}"/><text x="${L - 4}" y="${yy + 3}" text-anchor="end">${+v.toFixed(1)}</text>`;
     }
-    // x labels: month view → 1,5,10,15,20,25,30 ; all → about 6 labels
     const step = range === 'month' ? null : Math.max(1, Math.ceil(n / 6));
     series.forEach((s, i) => {
-      const d = parseKey(s.key), cx = L + slot * i + slot / 2;
+      const d = parseKey(s.key), cx = cxOf(i);
       const show = range === 'month' ? (d.getDate() === 1 || d.getDate() % 5 === 0) : i % step === 0;
       if (show) html += `<text x="${cx}" y="${H - 6}" text-anchor="middle">${range === 'month' ? d.getDate() : `${d.getMonth() + 1}/${d.getDate()}`}</text>`;
-      if (s[field] != null) {
-        const top = y(s[field]);
-        html += `<rect class="bar" data-i="${i}" x="${cx - bw / 2}" y="${top}" width="${bw}" height="${H - B - top}" rx="${Math.min(3, bw / 2)}" fill="${color}"/>`;
-      }
+      bars.forEach((def, j) => {
+        const v = s[def.field]; if (v == null) return;
+        const top = y(v), x = cx - groupW / 2 + bw * j;
+        html += `<rect x="${x}" y="${top}" width="${Math.max(1, bw - (bars.length > 1 && bw > 3 ? 1 : 0))}" height="${H - B - top}" rx="${Math.min(2, bw / 2)}" fill="${def.color}"/>`;
+      });
     });
+    for (const def of lines) {
+      let path = '', dots = '', pen = false;
+      series.forEach((s, i) => {
+        const v = s[def.field];
+        if (v == null) { pen = false; return; }
+        path += `${pen ? 'L' : 'M'}${cxOf(i)},${y(v)}`; pen = true;
+        dots += `<circle cx="${cxOf(i)}" cy="${y(v)}" r="${n > 62 ? 1.5 : 2.5}" fill="${def.color}"/>`;
+      });
+      html += `<path d="${path}" fill="none" stroke="${def.color}" stroke-width="2" stroke-linejoin="round"/>` + dots;
+    }
+    series.forEach((s, i) => { html += `<rect class="hit" data-i="${i}" x="${L + slot * i}" y="${T}" width="${slot}" height="${H - T}"/>`; });
     svg.innerHTML = html;
     el.appendChild(svg);
     const tip = document.createElement('div'); tip.className = 'tip'; tip.innerHTML = '&nbsp;';
     el.appendChild(tip);
     let sel = null;
     svg.addEventListener('click', e => {
-      const r = e.target.closest('rect.bar'); if (!r) return;
-      const s = series[+r.dataset.i], d = parseKey(s.key);
-      if (sel === r) { cur = s.key; showView('day'); return; }
-      if (sel) sel.setAttribute('opacity', '1');
-      svg.querySelectorAll('rect.bar').forEach(b => b.setAttribute('opacity', b === r ? '1' : '0.45'));
-      sel = r;
-      tip.textContent = `${d.getMonth() + 1}/${d.getDate()}（${WD[d.getDay()]}）: ${s[field]} ${unit}`;
+      const r = e.target.closest('rect.hit'); if (!r) return;
+      const i = +r.dataset.i, s = series[i], d = parseKey(s.key);
+      if (sel === i) { cur = s.key; showView('day'); return; }
+      sel = i;
+      const band = svg.querySelector('#band');
+      band.setAttribute('x', L + slot * i); band.setAttribute('visibility', 'visible');
+      tip.textContent = `${d.getMonth() + 1}/${d.getDate()}（${WD[d.getDay()]}）: ` +
+        defs.map(def => `${multi ? def.name + ' ' : ''}${s[def.field] ?? '–'}${s[def.field] != null ? ' ' + unit : ''}`).join('　');
     });
   }
 
@@ -613,8 +652,17 @@
     const [y, m] = month.split('-').map(Number);
     $('monthLabel').textContent = `${y}年${m}月`;
     const series = dailySeries(keysForRange());
-    drawChart($('chartMilk'), 'その日の最大ミルク量', 'ml', 'var(--milk)', series, 'maxMilk');
-    drawChart($('chartBreast'), 'その日のおっぱい合計時間', '分', 'var(--breast)', series, 'breast');
+    drawChart($('chartMilk'), 'その日の合計量・最大量', 'ml', [
+      { field: 'sumMilk', name: '合計', color: 'var(--milk-light)', kind: 'bar' },
+      { field: 'maxMilk', name: '最大', color: 'var(--milk)', kind: 'line' },
+    ], series);
+    drawChart($('chartToilet'), 'その日の回数', '回', [
+      { field: 'poop', name: 'うんち', color: 'var(--poop)', kind: 'bar' },
+      { field: 'pee', name: 'しっこ', color: 'var(--pee)', kind: 'bar' },
+    ], series);
+    drawChart($('chartBreast'), 'その日のおっぱい合計時間', '分', [
+      { field: 'breast', name: 'おっぱい', color: 'var(--breast)', kind: 'bar' },
+    ], series);
   }
   document.querySelectorAll('#rangeSeg button').forEach(b => b.onclick = () => { range = b.dataset.r; renderCharts(); });
   const shiftMonth = n => { const [y, m] = month.split('-').map(Number); const d = new Date(y, m - 1 + n, 1); month = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; renderCharts(); };
