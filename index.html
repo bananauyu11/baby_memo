@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f7f3ee">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="育児メモ">
+<title>育児メモ</title>
+<style>
+  :root {
+    --bg: #f7f3ee; --card: #ffffff; --text: #2b2622; --muted: #8a8078; --line: #e8e1d8;
+    --poop: #b07a3c; --pee: #d9a520; --milk: #4f86c6; --breast: #d9668a; --danger: #c94a4a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b1917; --card: #262320; --text: #f0ebe5; --muted: #a39a91; --line: #3a3531;
+      --poop: #cf9a5c; --pee: #e8c14a; --milk: #77a6dd; --breast: #e88aa8; --danger: #e06b6b;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    -webkit-tap-highlight-color: transparent; }
+  body { padding: env(safe-area-inset-top) 16px calc(80px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; }
+  button { font: inherit; color: inherit; cursor: pointer; border: none; background: none; }
+  h2 { font-size: 15px; color: var(--muted); font-weight: 600; margin: 20px 4px 8px; }
+  .card { background: var(--card); border-radius: 16px; padding: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+
+  /* date nav */
+  .datenav { display: flex; align-items: center; justify-content: space-between; padding: 14px 0 4px; }
+  .datenav button.arrow { width: 44px; height: 44px; border-radius: 50%; font-size: 20px; background: var(--card); }
+  .datenav .date { text-align: center; position: relative; }
+  .datenav .date strong { font-size: 22px; display: block; }
+  .datenav .date small { color: var(--muted); font-size: 13px; }
+  .datenav input[type=date] { position: absolute; inset: 0; opacity: 0; width: 100%; }
+  .today-btn { display: block; margin: 0 auto; font-size: 13px; color: var(--milk); padding: 4px 10px; }
+
+  /* counters */
+  .counters { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .counter { text-align: center; }
+  .counter .label { font-weight: 700; font-size: 16px; }
+  .counter .num { font-size: 44px; font-weight: 800; line-height: 1.1; margin: 4px 0 8px; font-variant-numeric: tabular-nums; }
+  .counter .btns { display: flex; gap: 10px; justify-content: center; }
+  .counter .btns button { width: 56px; height: 56px; border-radius: 50%; font-size: 28px; font-weight: 700; }
+  .counter .minus { background: var(--line); }
+  .counter.poop .plus { background: var(--poop); color: #fff; }
+  .counter.pee .plus { background: var(--pee); color: #fff; }
+  .counter.poop .num { color: var(--poop); }
+  .counter.pee .num { color: var(--pee); }
+
+  /* summary */
+  .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+  .summary div b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .summary div span { font-size: 12px; color: var(--muted); }
+
+  /* feed list */
+  .feeds { list-style: none; margin: 0; padding: 0; }
+  .feeds li { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+  .feeds li:last-child { border-bottom: none; }
+  .feeds .time { font-variant-numeric: tabular-nums; font-weight: 700; width: 52px; }
+  .feeds .tag { font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 99px; color: #fff; }
+  .tag.milk { background: var(--milk); } .tag.breast { background: var(--breast); }
+  .feeds .val { flex: 1; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .feeds .val small { font-size: 13px; color: var(--muted); font-weight: 400; }
+  .feeds .edit { color: var(--muted); padding: 8px; font-size: 14px; }
+  .empty { color: var(--muted); text-align: center; padding: 16px; font-size: 14px; }
+
+  .fab { position: fixed; right: max(16px, calc(50% - 264px)); bottom: calc(80px + env(safe-area-inset-bottom)); width: 64px; height: 64px;
+    border-radius: 50%; background: var(--text); color: var(--bg); font-size: 34px; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+
+  /* tabs */
+  .tabs { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--card); border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom); }
+  .tabs button { flex: 1; padding: 14px 0; font-size: 14px; color: var(--muted); font-weight: 600; }
+  .tabs button.active { color: var(--text); }
+  .view[hidden] { display: none; }
+
+  /* sheet */
+  .backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: flex-end; justify-content: center; z-index: 10; }
+  .backdrop[hidden] { display: none; }
+  .sheet { background: var(--card); width: 100%; max-width: 560px; border-radius: 20px 20px 0 0; padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); }
+  .sheet h3 { margin: 0 0 14px; font-size: 18px; }
+  .typepick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .typepick button { padding: 18px 0; border-radius: 14px; font-size: 18px; font-weight: 700; border: 2px solid var(--line); }
+  .typepick button.sel.milk { background: var(--milk); border-color: var(--milk); color: #fff; }
+  .typepick button.sel.breast { background: var(--breast); border-color: var(--breast); color: #fff; }
+  .field { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--line); }
+  .field label { font-weight: 600; }
+  .field input { font: inherit; font-size: 20px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--text); width: 140px; text-align: right; }
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 0 12px; }
+  .presets button { padding: 8px 14px; border-radius: 99px; background: var(--bg); border: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .sheet .actions { display: flex; gap: 10px; margin-top: 12px; }
+  .sheet .actions button { flex: 1; padding: 14px; border-radius: 12px; font-weight: 700; font-size: 16px; }
+  .btn-primary { background: var(--text); color: var(--bg) !important; }
+  .btn-secondary { background: var(--line); }
+  .btn-danger { color: var(--danger) !important; background: transparent; border: 1px solid var(--danger) !important; flex: 0 0 auto !important; }
+
+  /* charts */
+  .seg { display: flex; background: var(--line); border-radius: 10px; padding: 3px; margin-top: 14px; }
+  .seg button { flex: 1; padding: 8px; border-radius: 8px; font-weight: 600; font-size: 14px; color: var(--muted); }
+  .seg button.active { background: var(--card); color: var(--text); }
+  .monthnav { display: flex; align-items: center; justify-content: space-between; margin: 10px 0 0; }
+  .monthnav button { width: 40px; height: 40px; border-radius: 50%; background: var(--card); font-size: 18px; }
+  .monthnav strong { font-size: 18px; }
+  .chart-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .chart-head b { font-size: 15px; }
+  .chart-head span { font-size: 12px; color: var(--muted); }
+  .stats { display: flex; gap: 16px; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .stats b { color: var(--text); font-variant-numeric: tabular-nums; }
+  svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+  svg.chart text { fill: var(--muted); font-size: 10px; font-family: inherit; }
+  svg.chart .grid { stroke: var(--line); stroke-width: 1; }
+  svg.chart rect.bar { cursor: pointer; }
+  .tip { font-size: 13px; min-height: 18px; color: var(--text); text-align: center; margin-top: 4px; }
+
+  .settings button.row { display: block; width: 100%; text-align: left; padding: 14px 4px; border-bottom: 1px solid var(--line); font-size: 15px; }
+  .settings button.row:last-child { border-bottom: none; }
+  .note { font-size: 12px; color: var(--muted); margin: 8px 4px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<!-- ===== 記録 ===== -->
+<section class="view" id="view-day">
+  <div class="datenav">
+    <button class="arrow" id="prevDay" aria-label="前の日">‹</button>
+    <div class="date">
+      <strong id="dateLabel"></strong>
+      <small id="dateSub"></small>
+      <input type="date" id="datePicker" aria-label="日付を選ぶ">
+    </div>
+    <button class="arrow" id="nextDay" aria-label="次の日">›</button>
+  </div>
+  <button class="today-btn" id="todayBtn" hidden>今日に戻る</button>
+
+  <h2>回数</h2>
+  <div class="counters">
+    <div class="card counter poop">
+      <div class="label">うんち</div>
+      <div class="num" id="poopNum">0</div>
+      <div class="btns"><button class="minus" data-k="poop" data-d="-1" aria-label="うんちを減らす">−</button><button class="plus" data-k="poop" data-d="1" aria-label="うんちを増やす">＋</button></div>
+    </div>
+    <div class="card counter pee">
+      <div class="label">しっこ</div>
+      <div class="num" id="peeNum">0</div>
+      <div class="btns"><button class="minus" data-k="pee" data-d="-1" aria-label="しっこを減らす">−</button><button class="plus" data-k="pee" data-d="1" aria-label="しっこを増やす">＋</button></div>
+    </div>
+  </div>
+
+  <h2>この日のまとめ</h2>
+  <div class="card summary">
+    <div><b id="sumMilk">0</b><span>ミルク合計 ml</span></div>
+    <div><b id="maxMilk">–</b><span>最大ミルク ml</span></div>
+    <div><b id="sumBreast">0</b><span>おっぱい合計 分</span></div>
+  </div>
+
+  <h2>授乳の記録</h2>
+  <div class="card"><ul class="feeds" id="feedList"></ul></div>
+</section>
+
+<!-- ===== グラフ ===== -->
+<section class="view" id="view-chart" hidden>
+  <div class="seg" id="rangeSeg">
+    <button data-r="month" class="active">月ごと</button>
+    <button data-r="all">全期間</button>
+  </div>
+  <div class="monthnav" id="monthNav">
+    <button id="prevMonth" aria-label="前の月">‹</button>
+    <strong id="monthLabel"></strong>
+    <button id="nextMonth" aria-label="次の月">›</button>
+  </div>
+  <h2></h2>
+  <div class="card" id="chartMilk"></div>
+  <h2></h2>
+  <div class="card" id="chartBreast"></div>
+  <p class="note">棒をタップすると値が表示されます。もう一度タップするとその日の記録を開きます。</p>
+</section>
+
+<!-- ===== 設定 ===== -->
+<section class="view" id="view-settings" hidden>
+  <h2>データ</h2>
+  <div class="card settings">
+    <button class="row" id="exportBtn">バックアップを書き出す（JSON）</button>
+    <button class="row" id="importBtn">バックアップから読み込む</button>
+    <button class="row" id="csvBtn">CSVで書き出す</button>
+  </div>
+  <input type="file" id="importFile" accept="application/json,.json" hidden>
+  <p class="note">記録はこの端末のブラウザ内に保存されます。ブラウザのデータを消すと記録も消えるので、ときどきバックアップを書き出してください。<br>iPhoneではSafariの「共有 → ホーム画面に追加」でアプリのように使えます。</p>
+</section>
+
+<button class="fab" id="fab" aria-label="授乳を記録">＋</button>
+
+<nav class="tabs">
+  <button data-v="day" class="active">記録</button>
+  <button data-v="chart">グラフ</button>
+  <button data-v="settings">設定</button>
+</nav>
+
+<!-- ===== 入力シート ===== -->
+<div class="backdrop" id="sheetBg" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h3 id="sheetTitle">授乳を記録</h3>
+    <div class="typepick">
+      <button class="breast" data-t="breast">おっぱい</button>
+      <button class="milk" data-t="milk">ミルク</button>
+    </div>
+    <div class="field"><label for="fTime">時刻</label><input type="time" id="fTime"></div>
+    <div class="field"><label for="fVal" id="fValLabel">量（ml）</label><input type="number" id="fVal" inputmode="numeric" min="0" step="1"></div>
+    <div class="presets" id="presets"></div>
+    <div class="actions">
+      <button class="btn-danger" id="delBtn" hidden>削除</button>
+      <button class="btn-secondary" id="cancelBtn">キャンセル</button>
+      <button class="btn-primary" id="saveBtn">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const KEY = 'baby_memo_v1';
+  const WD = ['日','月','火','水','木','金','土'];
+  const TYPES = {
+    milk:   { name: 'ミルク',   unit: 'ml', label: '量（ml）',     presets: [40, 60, 80, 100, 120, 140, 160] },
+    breast: { name: 'おっぱい', unit: '分', label: '時間（分）', presets: [5, 10, 15, 20, 25, 30] },
+  };
+
+  // ---------- storage ----------
+  let db = load();
+  function load() {
+    try { const d = JSON.parse(localStorage.getItem(KEY)); if (d && d.days) return d; } catch (e) {}
+    return { days: {} };
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(db)); }
+    catch (e) { alert('保存に失敗しました。設定からバックアップを書き出してください。'); }
+  }
+  function day(key, create) {
+    if (!db.days[key] && create) db.days[key] = { poop: 0, pee: 0, feeds: [] };
+    return db.days[key] || { poop: 0, pee: 0, feeds: [] };
+  }
+  function prune(key) {
+    const d = db.days[key];
+    if (d && !d.poop && !d.pee && !d.feeds.length) delete db.days[key];
+  }
+
+  // ---------- date helpers (local time) ----------
+  const pad = n => String(n).padStart(2, '0');
+  const keyOf = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parseKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+  const addDays = (k, n) => { const d = parseKey(k); d.setDate(d.getDate() + n); return keyOf(d); };
+  const todayKey = () => keyOf(new Date());
+  const nowTime = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+
+  // ---------- day view ----------
+  let cur = todayKey();
+  const $ = id => document.getElementById(id);
+
+  function renderDay() {
+    const d = parseKey(cur);
+    $('dateLabel').textContent = `${d.getMonth() + 1}/${d.getDate()}（${WD[d.getDay()]}）`;
+    $('dateSub').textContent = cur === todayKey() ? '今日' : `${d.getFullYear()}年`;
+    $('datePicker').value = cur;
+    $('todayBtn').hidden = cur === todayKey();
+
+    const rec = day(cur);
+    $('poopNum').textContent = rec.poop;
+    $('peeNum').textContent = rec.pee;
+
+    const milks = rec.feeds.filter(f => f.type === 'milk').map(f => f.amount);
+    const breasts = rec.feeds.filter(f => f.type === 'breast').map(f => f.amount);
+    $('sumMilk').textContent = milks.reduce((a, b) => a + b, 0);
+    $('maxMilk').textContent = milks.length ? Math.max(...milks) : '–';
+    $('sumBreast').textContent = breasts.reduce((a, b) => a + b, 0);
+
+    const list = $('feedList');
+    list.innerHTML = '';
+    const feeds = [...rec.feeds].sort((a, b) => a.time.localeCompare(b.time));
+    if (!feeds.length) {
+      list.innerHTML = '<li class="empty" style="display:block">まだ記録がありません。右下の ＋ から追加できます。</li>';
+    }
+    for (const f of feeds) {
+      const t = TYPES[f.type];
+      const li = document.createElement('li');
+      li.innerHTML = `<span class="time">${f.time}</span><span class="tag ${f.type}">${t.name}</span>
+        <span class="val">${f.amount}<small> ${t.unit}</small></span><button class="edit">編集</button>`;
+      li.querySelector('.edit').onclick = () => openSheet(f);
+      list.appendChild(li);
+    }
+  }
+
+  document.querySelectorAll('.counter button').forEach(b => b.onclick = () => {
+    const rec = day(cur, true);
+    rec[b.dataset.k] = Math.max(0, rec[b.dataset.k] + Number(b.dataset.d));
+    prune(cur); save(); renderDay();
+  });
+  $('prevDay').onclick = () => { cur = addDays(cur, -1); renderDay(); };
+  $('nextDay').onclick = () => { cur = addDays(cur, 1); renderDay(); };
+  $('todayBtn').onclick = () => { cur = todayKey(); renderDay(); };
+  $('datePicker').onchange = e => { if (e.target.value) { cur = e.target.value; renderDay(); } };
+
+  // ---------- entry sheet ----------
+  let editing = null, selType = null;
+  function setType(t) {
+    selType = t;
+    document.querySelectorAll('.typepick button').forEach(b => b.classList.toggle('sel', b.dataset.t === t));
+    $('fValLabel').textContent = TYPES[t].label;
+    const p = $('presets'); p.innerHTML = '';
+    for (const v of TYPES[t].presets) {
+      const b = document.createElement('button');
+      b.textContent = v + TYPES[t].unit;
+      b.onclick = () => { $('fVal').value = v; };
+      p.appendChild(b);
+    }
+  }
+  function openSheet(f) {
+    editing = f || null;
+    $('sheetTitle').textContent = f ? '記録を編集' : '授乳を記録';
+    $('delBtn').hidden = !f;
+    // 新規はミルク/おっぱいのリストから選んでもらう（前回の種類を初期選択）
+    const last = localStorage.getItem(KEY + '_lastType') || 'milk';
+    setType(f ? f.type : last);
+    $('fTime').value = f ? f.time : (cur === todayKey() ? nowTime() : '12:00');
+    $('fVal').value = f ? f.amount : '';
+    $('sheetBg').hidden = false;
+    if (!f) setTimeout(() => $('fVal').focus(), 50);
+  }
+  function closeSheet() { $('sheetBg').hidden = true; editing = null; }
+  document.querySelectorAll('.typepick button').forEach(b => b.onclick = () => setType(b.dataset.t));
+  $('fab').onclick = () => openSheet();
+  $('cancelBtn').onclick = closeSheet;
+  $('sheetBg').onclick = e => { if (e.target === $('sheetBg')) closeSheet(); };
+  $('saveBtn').onclick = () => {
+    const amount = Math.round(Number($('fVal').value));
+    const time = $('fTime').value;
+    if (!time) { alert('時刻を入力してください'); return; }
+    if (!amount || amount <= 0) { alert(TYPES[selType].label + 'を入力してください'); return; }
+    const rec = day(cur, true);
+    if (editing) Object.assign(editing, { type: selType, time, amount });
+    else rec.feeds.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), type: selType, time, amount });
+    try { localStorage.setItem(KEY + '_lastType', selType); } catch (e) {}
+    save(); closeSheet(); renderDay();
+  };
+  $('delBtn').onclick = () => {
+    if (!editing || !confirm('この記録を削除しますか？')) return;
+    const rec = day(cur, true);
+    rec.feeds = rec.feeds.filter(f => f !== editing);
+    prune(cur); save(); closeSheet(); renderDay();
+  };
+
+  // ---------- charts ----------
+  let range = 'month';
+  let month = cur.slice(0, 7);
+
+  function dailySeries(keys) {
+    return keys.map(k => {
+      const feeds = (db.days[k] || { feeds: [] }).feeds;
+      const milks = feeds.filter(f => f.type === 'milk').map(f => f.amount);
+      const breast = feeds.filter(f => f.type === 'breast').reduce((a, f) => a + f.amount, 0);
+      return { key: k, maxMilk: milks.length ? Math.max(...milks) : null, breast: breast || null };
+    });
+  }
+  function keysForRange() {
+    if (range === 'month') {
+      const [y, m] = month.split('-').map(Number);
+      const n = new Date(y, m, 0).getDate();
+      return Array.from({ length: n }, (_, i) => `${month}-${pad(i + 1)}`);
+    }
+    const all = Object.keys(db.days).sort();
+    if (!all.length) return [];
+    const out = []; let k = all[0]; const end = all[all.length - 1];
+    while (k <= end) { out.push(k); k = addDays(k, 1); }
+    return out;
+  }
+  function niceMax(v) {
+    if (v <= 4) return 4;
+    const p = Math.pow(10, Math.floor(Math.log10(v)));
+    for (const s of [2, 4, 6, 8, 10]) if (s * p >= v) return s * p;
+    return 10 * p;
+  }
+
+  function drawChart(el, title, unit, color, series, field) {
+    const vals = series.map(s => s[field]);
+    const has = vals.filter(v => v != null);
+    const avg = has.length ? Math.round(has.reduce((a, b) => a + b, 0) / has.length) : null;
+    const mx = has.length ? Math.max(...has) : null;
+    el.innerHTML = `<div class="chart-head"><b>${title}</b><span>${unit}</span></div>
+      <div class="stats"><span>平均 <b>${avg ?? '–'}</b></span><span>最高 <b>${mx ?? '–'}</b></span><span>記録日数 <b>${has.length}</b></span></div>`;
+    if (!series.length) { el.insertAdjacentHTML('beforeend', '<div class="empty">記録がありません</div>'); return; }
+
+    const W = 340, H = 180, L = 30, R = 6, T = 8, B = 22;
+    const ymax = niceMax(mx || 0);
+    const n = series.length, slot = (W - L - R) / n, bw = Math.max(1, Math.min(slot * 0.7, 24));
+    const y = v => T + (H - T - B) * (1 - v / ymax);
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('class', 'chart');
+    let html = '';
+    for (let i = 0; i <= 4; i++) {
+      const v = ymax * i / 4, yy = y(v);
+      html += `<line class="grid" x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}"/><text x="${L - 4}" y="${yy + 3}" text-anchor="end">${+v.toFixed(1)}</text>`;
+    }
+    // x labels: month view → 1,5,10,15,20,25,30 ; all → about 6 labels
+    const step = range === 'month' ? null : Math.max(1, Math.ceil(n / 6));
+    series.forEach((s, i) => {
+      const d = parseKey(s.key), cx = L + slot * i + slot / 2;
+      const show = range === 'month' ? (d.getDate() === 1 || d.getDate() % 5 === 0) : i % step === 0;
+      if (show) html += `<text x="${cx}" y="${H - 6}" text-anchor="middle">${range === 'month' ? d.getDate() : `${d.getMonth() + 1}/${d.getDate()}`}</text>`;
+      if (s[field] != null) {
+        const top = y(s[field]);
+        html += `<rect class="bar" data-i="${i}" x="${cx - bw / 2}" y="${top}" width="${bw}" height="${H - B - top}" rx="${Math.min(3, bw / 2)}" fill="${color}"/>`;
+      }
+    });
+    svg.innerHTML = html;
+    el.appendChild(svg);
+    const tip = document.createElement('div'); tip.className = 'tip'; tip.innerHTML = '&nbsp;';
+    el.appendChild(tip);
+    let sel = null;
+    svg.addEventListener('click', e => {
+      const r = e.target.closest('rect.bar'); if (!r) return;
+      const s = series[+r.dataset.i], d = parseKey(s.key);
+      if (sel === r) { cur = s.key; showView('day'); return; }
+      if (sel) sel.setAttribute('opacity', '1');
+      svg.querySelectorAll('rect.bar').forEach(b => b.setAttribute('opacity', b === r ? '1' : '0.45'));
+      sel = r;
+      tip.textContent = `${d.getMonth() + 1}/${d.getDate()}（${WD[d.getDay()]}）: ${s[field]} ${unit}`;
+    });
+  }
+
+  function renderCharts() {
+    document.querySelectorAll('#rangeSeg button').forEach(b => b.classList.toggle('active', b.dataset.r === range));
+    $('monthNav').hidden = range !== 'month';
+    $('monthNav').style.display = range === 'month' ? '' : 'none';
+    const [y, m] = month.split('-').map(Number);
+    $('monthLabel').textContent = `${y}年${m}月`;
+    const series = dailySeries(keysForRange());
+    drawChart($('chartMilk'), 'その日の最大ミルク量', 'ml', 'var(--milk)', series, 'maxMilk');
+    drawChart($('chartBreast'), 'その日のおっぱい合計時間', '分', 'var(--breast)', series, 'breast');
+  }
+  document.querySelectorAll('#rangeSeg button').forEach(b => b.onclick = () => { range = b.dataset.r; renderCharts(); });
+  const shiftMonth = n => { const [y, m] = month.split('-').map(Number); const d = new Date(y, m - 1 + n, 1); month = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; renderCharts(); };
+  $('prevMonth').onclick = () => shiftMonth(-1);
+  $('nextMonth').onclick = () => shiftMonth(1);
+
+  // ---------- tabs ----------
+  function showView(v) {
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+    for (const id of ['day', 'chart', 'settings']) $('view-' + id).hidden = id !== v;
+    $('fab').hidden = v !== 'day';
+    if (v === 'day') renderDay();
+    if (v === 'chart') { month = cur.slice(0, 7); renderCharts(); }
+    window.scrollTo(0, 0);
+  }
+  document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showView(b.dataset.v));
+
+  // ---------- backup ----------
+  function download(name, text, type) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type }));
+    a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  $('exportBtn').onclick = () => download(`baby_memo_${todayKey()}.json`, JSON.stringify(db, null, 1), 'application/json');
+  $('csvBtn').onclick = () => {
+    const rows = [['日付', 'うんち', 'しっこ', '時刻', '種類', '量/時間', '単位']];
+    for (const k of Object.keys(db.days).sort()) {
+      const d = db.days[k];
+      const feeds = [...d.feeds].sort((a, b) => a.time.localeCompare(b.time));
+      if (!feeds.length) rows.push([k, d.poop, d.pee, '', '', '', '']);
+      feeds.forEach((f, i) => rows.push([k, i ? '' : d.poop, i ? '' : d.pee, f.time, TYPES[f.type].name, f.amount, TYPES[f.type].unit]));
+    }
+    download(`baby_memo_${todayKey()}.csv`, '﻿' + rows.map(r => r.join(',')).join('\n'), 'text/csv');
+  };
+  $('importBtn').onclick = () => $('importFile').click();
+  $('importFile').onchange = async e => {
+    const file = e.target.files[0]; if (!file) return;
+    try {
+      const d = JSON.parse(await file.text());
+      if (!d || typeof d.days !== 'object') throw new Error();
+      if (!confirm('今の記録をバックアップの内容で置き換えます。よろしいですか？')) return;
+      db = d; save(); alert('読み込みました'); showView('day');
+    } catch (err) { alert('読み込めませんでした。バックアップのJSONファイルを選んでください。'); }
+    finally { e.target.value = ''; }
+  };
+
+  renderDay();
+})();
+</script>
+</body>
+</html>
